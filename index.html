@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>StepWise</title>
+</head>
+<body>
+    <div class="wrap">
+        <header class="app-header">
+            <div class="brand">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <path d="M4 22 L11 8 L15 15 L18 9 L22 22" stroke="#3F5A45" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="18" cy="9" r="2" fill="#C9793D"/>
+      </svg>
+      <h1>StepWise</h1>
+      </div>
+      <p class="tagline">Turn a goal that feels too big into a trail you can actually walk.</p>
+        </header>
+
+        <nav class="nav">
+            <button class="nav-btn" id="nav-today" onclick="showPage('today')">Today</button>
+            <button class="nav-btn active" id="nav-trails" onclick="showPage('trails')">My Trails</button>
+            <button class="nav-btn" id="nav-map" onclick="showPage('map')">Trail Map</button>
+            <button class="nav-btn" id="nav-summitLog" onclick="showPage('summitLog')">Summit Log</button>
+            <button class="nav-btn" id="nav-reflect" onclick="showPage('reflect')"></button>"
+        </nav>
+
+        <div id="page-today" class="page">
+            <p class="page-title">Today</p>
+            <p class="page-sub">Just the one next step for each active trail - nothing else to look at right now.</p>
+            <div id="today-container"></div>
+        </div>
+
+        <div id="page-trails" class="page active">
+            <div class="new-goal-card">
+                <label for="goal-input">What's a goal you want to reach?</label>
+                <input type="text" id="goal-input" placeholder="e.g Run a 5K, Learn conversational Spanish, Redecorate/Remodel the living room">
+                <label for="why-input">Why does this matter to you? <span style="font-weight:400">(optional but worth a sentence)</span></label>
+                <textarea id="why-input" placeholder="What will it feel like once you've done this"></textarea>
+                <button class="btn btn-primary" onclick="createGoal()"></button>Start this trail</button>
+            </div>
+            <div id="goals-container"></div>
+        </div>
+    </div>
+
+    <div id="page-map" class="page">
+        <p class="page-title">Trail Map</p>
+        <p class="page-sub">Every active gaol, side by side - taller peaks mean more steps to climb. Tap one to jump to it.</p>
+        <div id="trail-map-page-content"></div>
+    </div>
+
+    <div id="page-summit-log" class="page">
+        <p class="page-title">Summit Log</p>
+        <p class="page-sub">Trails you've finished and put away - a record of what you've actually climbed.</p>
+        <div id="summit-log-container"></div>
+    </div>
+
+    <div id="page-reflect" class="page">
+        <p class="page-title">Reflect</p>
+        <p class="page-sub">A quick check-in on what's still in progress, plus how recent steps have felt.</p>
+        <div id="reflection-container"></div>
+    </div>
+
+    <p>fixing git</p>
+    
+    <script src="script.js"></script>
+</body>
+</html>
