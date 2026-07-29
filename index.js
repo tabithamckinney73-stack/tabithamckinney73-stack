@@ -265,6 +265,7 @@ function renderStepRow(goal, step, isCurrent) {
     if (goal.pendingMoodStepId === step.id) {
         moodPicker = `<div class="mood-picker">
         <span class="mood-prompt">How'd that feel?</span>${moodOptions.map(m => `<button class="mood-btn" onclick="setMood(${goal.id}, ${step.id}, '${m.emoji}')" title="${m.label}">${m.emoji}</button>`).join("")} <button class="mood-skip" onclick="dismissMood(${goal.id})">skip</button>
+        </div>
         `
     }
     return `<div class="step ${step.done ? 'done' : ''} ${isCurrent ? 'current' : ''}">
