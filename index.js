@@ -1,20 +1,20 @@
 let goals = [];
-    let goalIdCounter = 0;
-    let currentPage = 'trails';
+let goalIdCounter = 0;
+let currentPage = 'trails';
 
 const moodOptions = [
-    { emoji: "💪", label: "strong"},
-    { emoji: "😌", label: "relieved"},
-    { emoji: "😅", label: "tough"},
-    { emoji: "😐", label: "neutral"},
-    { emoji: "🎉", label: "excited"}
+    { emoji: "💪", label: "strong" },
+    { emoji: "😌", label: "relieved" },
+    { emoji: "😅", label: "tough" },
+    { emoji: "😐", label: "neutral" },
+    { emoji: "🎉", label: "excited" }
 ];
 
-const categories = { 
+const categories = {
     running: {
-    keywords: ["run", "5k", "10k", "marathon", "jog"],
-    steps: ["Buy or dig out a pair of running shoes", "Walk/jog for 10 minutes, no pressure", "Look up a beginner training plan", "Pick a date for your first short run"],
-    questions: ["What's a distance you could jog today without stopping?", "What's stopping you from lacing up right now?", "What day this week could you do your first run?", "Who could jog with you the first time?"]
+        keywords: ["run", "5k", "10k", "marathon", "jog"],
+        steps: ["Buy or dig out a pair of running shoes", "Walk/jog for 10 minutes, no pressure", "Look up a beginner training plan", "Pick a date for your first short run"],
+        questions: ["What's a distance you could jog today without stopping?", "What's stopping you from lacing up right now?", "What day this week could you do your first run?", "Who could jog with you the first time?"]
     },
 
     fitness: {
@@ -101,3 +101,415 @@ const categories = {
         questions: ["What's the smallest version of {goal}?", "What's stopping you from starting {goal} today?", "What could you finish in 10 minutes toward {goal}?", "Who could help you with {goal}?"]
     }
 };
+
+function categoryFor(title) {
+    const t = title.toLowerCase();
+    for (const [name, cat] of Object.entries(categories)) {
+        if (name === "default")
+            continue;
+        if (cat.keywords.some(k => t.includes(k))) return name;
+    }
+    return "default";
+}
+
+
+function suggestSteps(title) {
+    return categories[categoryFor(title)].steps
+}
+
+function questionsFor(goal) {
+    const set = categories[categoryFor(goal.title)].questions;
+    return set
+        .map(q => q.replace("{goal}", goal.title.toLowerCase()))
+        .filter(q => !goal.answeredQuestions.includes(q));
+}
+
+function getActiveGoals() {
+    return goals.filter(g => !g.archived);
+}
+
+function getArchivedGoals() {
+    return goals.filter(g => g.archived);
+}
+
+function showPage(page) {
+    currentPage = page;
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-' + page).classList.add('active')
+}
+
+function goToInTrails(goalId) {
+    showPage('trails');
+    setTimeout(() => scrollToGoal(goalId), 30);
+}
+
+function scrollToGoal(goalId) {
+    const el = document.getElementById(`goal-${goalId}`);
+    if (el)
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function createGoal() {
+    const titleEl = document.getElementById('goal-input');
+    const title = titleEl.value.trim();
+    if (!title) {
+        titleEl.focus();
+        return;
+    }
+    const whyEl = document.getElementById('why-input')
+    const why = whyEl.value.trim();
+    const goal = {
+        id: goalIdCounter++,
+        title,
+        why,
+        steps:
+            suggestSteps(title).map((text, i) => ({ id: i, text, done: false, mood: null })),
+        activeQuestion: null,
+        answeredQuestions: [],
+        archived: false,
+        pendingMoodStepId: null,
+        checkedIn: false
+    };
+    goals.unshift(goal);
+    titleEl.value = "";
+    whyEl.value = "";
+    renderAll();
+}
+
+function toggleStep(goalId, stepId) {
+    const goal = goals.find(g => g.id === goalId);
+    const step = goal.steps.find(s => s.id === stepId);
+    if (!step.done) {
+        step.done = true;
+        goal.pendingMoodStepId = stepId;
+    } else {
+        step.done = false;
+        step.mood = null;
+        if (goal.pendingMoodStepId === stepId) goal.pendingMoodStepId = null;
+    }
+    renderAll();
+}
+
+function setMood(goalId, stepId, mood) {
+    const goal = goals.find(g => g.id === goalId);
+    const step = goal.steps.find(s => s.id === stepId);
+    step.mood = mood
+    goal.pendingMoodStepId = null;
+    renderAll();
+}
+
+function dismissMood(goalId) {
+    const goal = goals.find(g => g.id === goalId);
+    goal.pendingMoodStepId = null;
+    renderAll();
+}
+
+function useQuestion(goalId, question) {
+    const goal = goals.find(g => g.id === goalId);
+    const input = document.getElementById(`step-input-${goalId}`);
+    if (!input || !goal) return;
+    goal.activeQuestion = question;
+    input.placeholder = question;
+    input.value = "";
+    input.focus();
+}
+
+function addStep(goalId, inputEl) {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    const goal = goals.find(g => g.id === goalId);
+    const nextId = goal.steps.length ? Math.max(...goal.steps.map(s => s.id)) + 1 : 0;
+    const newStep = { id: nextId, text, done: false, mood: null };
+    if (goal.activeQuestion) {
+        newStep.question = goal.activeQuestion;
+
+        goal.answeredQuestions.push(goal.activeQuestion);
+
+        goal.activeQuestion = null
+    }
+
+    goal.steps.push(newStep);
+    inputEl.value = "";
+    renderAll();
+}
+
+function removeGoal(goalId) {
+    goals = goals.filter(g => g.id !== goalId);
+    renderAll();
+}
+
+function archiveGoal(goalId) {
+    const goal = goals.find(g => g.id === goalId);
+    goal.archived = true;
+    renderAll();
+}
+
+function restoreGoal(goalId) {
+    const goal = goals.find(g => g.id === goalId);
+    goal.archived = false;
+    renderAll();
+}
+
+function checkInGoal(goalId) {
+    const goal = goals.find(g => g.id === goalId);
+    goal.checkedIn = true;
+    renderAll();
+}
+
+function renderStepRow(goal, step, isCurrent) {
+    let moodPicker = '';
+    if (goal.pendingMoodStepId === step.id) {
+        moodPicker = `<div class="mood-picker">
+        <span class="mood-prompt">How'd that feel?</span>${moodOptions.map(m => `<button class="mood-btn" onclick="setMood(${goal.id}, ${step.id}, '${m.emoji}')" title="${m.label}">${m.emoji}</button>`).join("")} <button class="mood-skip" onclick="dismissMood(${goal.id})">skip</button>
+        `
+    }
+    return `<div class="step ${step.done ? 'done' : ''} ${isCurrent ? 'current' : ''}">
+     <div class="step-line"> </div>
+     <div class="stone" onclick="toggleStep(${goal.id}, ${step.id})">${step.done ? (step.mood || '✓') : ''}</div>
+    <div class="step-text">${step.question ? `<div class="step-question">${escapeHtml(step.question)}</div>` : ''}
+    ${escapeHtml(step.text)}${isCurrent ? '<span class="step-badge">next</span>' : ''}
+    ${moodPicker}</div>
+    </div>`;
+}
+
+function mountainSvg(goal) {
+    const total = goal.steps.length;
+    const doneCount = goal.steps.filter(s => s.done).length;
+    const pct = total ? Math.round((doneCount / total) * 100) : 0;
+    const peakHeight = Math.max(34, Math.min(70, 30 + total * 5));
+    const viewH = 78;
+    const baseY = 74;
+    const peakY = baseY - peakHeight;
+    const fillH = peakHeight * (pct / 100);
+    const fillY = baseY - fillH;
+    const reached = total > 0 && pct === 100;
+    const clipId = `clip-${goal.id}`;
+    return `
+     <svg class="peak-svg" width="72" height="${viewH}" viewBox="0 0 72 ${viewH}">
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="${fillY}" width="72" height="${fillH + 4}"></rect>
+          </clipPath>
+        </defs>
+        <path d="M6 ${baseY} L36 ${peakY} L66 ${baseY} Z" fill="var(--moss-light)" stroke="var(--line)" stroke-width="1.5"/>
+        <path d="M6 ${baseY} L36 ${peakY} L66 ${baseY} Z" fill="var(--moss)" clip-path="url(#${clipId})"/>
+        ${reached ? `<circle cx="36" cy="${peakY}" r="3.5" fill="var(--amber)"/>` : ''}
+      </svg>`;
+}
+
+function renderTrails() {
+    const container = document.getElementById('goals-container');
+    const active = getActiveGoals();
+    if (active.length === 0) {
+        const archivedNote = getArchivedGoals().length
+            ? `<p style="margin-top:6px;">You've logged ${getArchivedGoals().length} finished trail${getArchivedGoals().length > 1 ? 's' : ''} — check the Summit Log tab.</p>`
+            : '';
+        container.innerHTML = `
+        <div class="empty">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path d="M8 40 L20 16 L27 28 L33 17 L40 40" stroke="#B4B2A9" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          <p>No trails yet. Add a goal above and we'll suggest a first path up.</p>
+          ${archivedNote}
+        </div>`;
+        return;
+    }
+    container.innerHTML = active.map(goal => {
+        const total = goal.steps.length;
+        const doneCount = goal.steps.filter(s => s.done).length;
+        const pct = total ? Math.round((doneCount / total) * 100) : 0;
+        const firstUndoneIndex = goal.steps.findIndex(s => !s.done);
+        const stepsHtml = goal.steps.map((step, i) => renderStepRow(goal, step, i === firstUndoneIndex)).join("");
+        const reached = total > 0 && doneCount === total;
+
+        return `
+        <div class="goal-card" id="goal-${goal.id}">
+          <div class="goal-card-head">
+            <div>
+              <p class="goal-title">${escapeHtml(goal.title)}</p>
+              ${goal.why ? `<p class="goal-why">"${escapeHtml(goal.why)}"</p>` : ''}
+            </div>
+            <div style="text-align:right;">
+              <div class="goal-progress-label">${doneCount}/${total} steps</div>
+              <button class="remove-goal" onclick="removeGoal(${goal.id})">remove</button>
+            </div>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="breakdown-hint">Suggested first path — tap a stone to mark it done, or add your own step below.</div>
+          <div class="trail">${stepsHtml}</div>
+          ${questionsFor(goal).length ? `<div class="question-chips">
+            ${questionsFor(goal).map(q => `<button class="chip" onclick="useQuestion(${goal.id}, '${escapeAttr(q)}')">${escapeHtml(q)}</button>`).join("")}
+          </div>` : ''}
+          <div class="add-step-row">
+            <input type="text" id="step-input-${goal.id}" placeholder="Add another small step..." onkeydown="if(event.key==='Enter') addStep(${goal.id}, this)">
+            <button class="btn btn-ghost" onclick="addStep(${goal.id}, this.previousElementSibling)">Add</button>
+          </div>
+          <div class="summit ${reached ? 'reached' : ''}">
+            <div class="summit-left">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 2 L16 14 H4 Z" fill="${reached ? '#3F5A45' : '#DDE2D6'}"/>
+                <path d="M10 2 L13 8 H12 L14 12" stroke="${reached ? '#C9793D' : '#B4B2A9'}" stroke-width="1.4"/>
+              </svg>
+              ${reached ? "Summit reached — you did the hard thing." : "The summit: every step above, done."}
+            </div>
+            ${reached ? `<button class="btn btn-amber btn-small" onclick="archiveGoal(${goal.id})">Log this summit</button>` : ''}
+          </div>
+        </div>`;
+    }).join("");
+}
+
+function renderToday() {
+    const container = document.getElementById('today-container');
+    const active = getActiveGoals();
+    const withNextStep = active.filter(g => g.steps.some(s => !s.done));
+    if (withNextStep.length === 0) {
+        container.innerHTML = `
+        <div class="empty">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path d="M8 40 L20 16 L27 28 L33 17 L40 40" stroke="#B4B2A9" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          <p>${active.length === 0 ? "No active trails yet — add a goal in My Trails to get started." : "All caught up — every active trail's next step is done."}</p>
+        </div>`;
+        return;
+    }
+    container.innerHTML = withNextStep.map(goal => {
+        const nextStep = goal.steps.find(s => !s.done);
+        return `
+        <div class="today-item">
+          <p class="today-goal-title">${escapeHtml(goal.title)}</p>
+          <div class="trail">${renderStepRow(goal, nextStep, true)}</div>
+        </div>`;
+    }).join("");
+}
+
+function renderTrailMapPage() {
+    const section = document.getElementById('trail-map-page-content');
+    const active = getActiveGoals();
+    if (active.length === 0) {
+        section.innerHTML = `
+        <div class="empty">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path d="M8 40 L20 16 L27 28 L33 17 L40 40" stroke="#B4B2A9" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+          <p>No active trails yet — add a goal in My Trails to see it appear here.</p>
+        </div>`;
+        return;
+    }
+    section.innerHTML = `
+      <div class="trail-map-wrap">
+        <div class="trail-map-row">
+          ${active.map(goal => {
+        const total = goal.steps.length;
+        const doneCount = goal.steps.filter(s => s.done).length;
+        const pct = total ? Math.round((doneCount / total) * 100) : 0;
+        return `
+              <button class="peak-item" onclick="goToGoalInTrails(${goal.id})">
+                ${mountainSvg(goal)}
+                <div class="peak-label">${escapeHtml(goal.title)}</div>
+                <div class="peak-pct">${pct}%</div>
+              </button>`;
+    }).join("")}
+        </div>
+      </div>`;
+}
+
+function renderArchive() {
+    const container = document.getElementById('summit-log-container');
+    const archived = getArchivedGoals();
+    if (archived.length === 0) {
+        container.innerHTML = `
+        <div class="empty">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path d="M10 18 H38 V38 H10 Z" stroke="#B4B2A9" stroke-width="2.5" stroke-linejoin="round"/>
+            <path d="M8 12 H40 V18 H8 Z" stroke="#B4B2A9" stroke-width="2.5" stroke-linejoin="round"/>
+          </svg>
+          <p>Nothing logged yet — finish a trail and log its summit to keep a record here.</p>
+        </div>`;
+        return;
+    }
+    container.innerHTML = archived.map(goal => {
+        const total = goal.steps.length;
+        return `
+        <div class="archive-card">
+          <div class="archive-card-head">
+            <div>
+              <p class="archive-title">${escapeHtml(goal.title)}</p>
+              ${goal.why ? `<p class="goal-why">"${escapeHtml(goal.why)}"</p>` : ''}
+            </div>
+            <button class="btn btn-ghost btn-small" onclick="restoreGoal(${goal.id})">Restore</button>
+          </div>
+          <div class="archive-steps">
+            ${goal.steps.map(s => `<div>${s.mood ? `<span class="done-mood">${s.mood}</span>` : '✓ '}${escapeHtml(s.text)}</div>`).join("")}
+          </div>
+          <p style="font-size:12px; color:var(--ink-soft); margin:10px 0 0;">${total} step${total !== 1 ? 's' : ''} completed</p>
+        </div>`;
+    }).join("");
+}
+
+function renderReflect() {
+    const container = document.getElementById('reflection-container');
+    const active = getActiveGoals().filter(g => g.steps.length > 0 && g.steps.some(s => !s.done));
+
+    const checkinHtml = active.length === 0
+        ? `<p style="color:var(--ink-soft); font-size:14px; margin-bottom:28px;">Nothing mid-progress to check in on right now.</p>`
+        : active.map(goal => `
+          <div class="reflect-card">
+            <p class="goal-title" style="font-size:17px;">${escapeHtml(goal.title)}</p>
+            ${goal.why ? `<p class="goal-why">"${escapeHtml(goal.why)}"</p>` : `<p class="goal-why">No "why" written down for this one yet.</p>`}
+            ${goal.checkedIn
+                ? `<p class="reflect-confirmed">✓ Checked in — still on the trail.</p>`
+                : `<div class="reflect-actions">
+                  <button class="btn btn-primary btn-small" onclick="checkInGoal(${goal.id})">Still feels right</button>
+                  <button class="btn btn-ghost btn-small" onclick="goToGoalInTrails(${goal.id})">Adjust the steps</button>
+                </div>`
+            }
+          </div>`).join("");
+
+    const allStepsWithMood = [];
+    goals.forEach(goal => {
+        goal.steps.forEach(step => {
+            if (step.mood) {
+                allStepsWithMood.push({ goalTitle: goal.title, text: step.text, mood: step.mood });
+            }
+        });
+    });
+
+    console.log(allStepsWithMood)
+    const moodHtml = allStepsWithMood.length === 0 ? `<p style="color:var(--ink-soft); font-size:14px;">No moods logged yet — they'll show up here after you mark steps done.</p>`
+        : allStepsWithMood.slice().reverse().map(item => `
+          <div class="mood-history-item">
+            <span class="mood-history-emoji">${item.mood}</span>
+            <span>${escapeHtml(item.text)} <span class="mood-history-goal">— ${escapeHtml(item.goalTitle)}</span></span>
+          </div>`).join("");
+
+    container.innerHTML = `
+      <p class="today-goal-title" style="margin-bottom:14px;">Still in progress</p>
+      ${checkinHtml}
+      <p class="today-goal-title" style="margin:28px 0 4px;">How recent steps have felt</p>
+      <div class="reflect-card">${moodHtml}</div>
+    `;
+}
+
+function renderAll() {
+    renderTrails();
+    renderToday();
+    renderTrailMapPage();
+    renderArchive();
+    renderReflect();
+}
+
+function escapeAttr(str) {
+    return str.replace(/'/g, "\\'");
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+renderAll();
