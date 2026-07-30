@@ -16,6 +16,34 @@ I think im having trouble with the setting of the mood because when i mark a ste
 
 when completing steps on one task, all of my trail maps are filling instead of just the one that has any tasks completed
 
+does this code look correct? 
+
+<!-- function mountainSvg(goal) {
+    const total = goal.steps.length;
+    const doneCount = goal.steps.filter(s => s.done).length;
+    const pct = total ? Math.round((doneCount / total) * 100) : 0;
+    const peakHeight = Math.max(34, Math.min(70, 30 + total * 5));
+    const viewH = 78;
+    const baseY = 74;
+    const peakY = baseY - peakHeight;
+    const fillH = peakHeight * (pct / 100);
+    const fillY = baseY - fillH;
+    const reached = total > 0 && pct === 100;
+    const clipId = `clip-${goal.id}`;
+    return `
+     <svg class="peak-svg" width="72" height="${viewH}" viewBox="0 0 72 ${viewH}">
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="${fillY}" width="72" height="${fillH + 4}"></rect>
+          </clipPath>
+        </defs>
+        <path d="M6 ${baseY} L36 ${peakY} L66 ${baseY} Z" fill="var(--moss-light)" stroke="var(--line)" stroke-width="1.5"/>
+        <path d="M6 ${baseY} L36 ${peakY} L66 ${baseY} Z" fill="var(--moss)" clip-path="url(#${clipId})"/>
+        ${reached ? `<circle cx="36" cy="${peakY}" r="3.5" fill="var(--amber)"/>` : ''}
+      </svg>`;
+} -->
+
+
 when i mark a step as done it strikes through the text but it doesn't just strike through the text of the step that I marked it strikes it out for all of the text until i press a mood or the skip on the mood choice.
 
 can you explain to me why a lot of the functions include the RenderAll() function at the end of them
