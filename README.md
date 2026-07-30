@@ -2,6 +2,10 @@
 
 Problem: I feel that a lot of people whether justice impacted or not, they can have lots of goals that just feel so big that they don't know where to begin, or they tend to be put off because they seem out of reach or just seem impossible at the time.
 
+## Live Demo
+
+[View my project here] (https://tabithamckinney73-stack.github.io/tabithamckinney73-stack/)
+
 ## Value:
 The value of this project for me is to help people take a big goal that may be intimidating to someone and help them to break these goals down into smaller steps that can show the user that there are steps they can take towards completing the goals they want to achieve. Giving ideas of where to start, while asking questions to expand steps, asking how completing steps made them feel, and allowing them to reflect on how different steps have affected the user, while also keeping track of the things that the user has achieved.
 
